@@ -149,11 +149,7 @@ For example:
 
 [source,java,indent=0]
 ----
-	new SpringApplicationBuilder()
-		.bannerMode(Banner.Mode.OFF)
-		.sources(Parent.class)
-		.child(Application.class)
-		.run(args);
+include::{code-examples}/builder/SpringApplicationBuilderExample.java[tag=hierarchy]
 ----
 
 NOTE: There are some restrictions when creating an `ApplicationContext` hierarchy, e.g.
@@ -1709,8 +1705,16 @@ Spring Boot also supports advanced resource handling features provided by Spring
 allowing use cases such as cache busting static resources or using version agnostic URLs
 for Webjars.
 
-For example, the following configuration will configure a cache busting solution
-for all static resources, effectively adding a content hash in URLs, such as
+To use version agnostic URLs for Webjars, simply add the `webjars-locator` dependency.
+Then declare your Webjar, taking jQuery for example, as `"/webjars/jquery/dist/jquery.min.js"`
+which results in `"/webjars/jquery/x.y.z/dist/jquery.min.js"` where `x.y.z` is the Webjar
+version.
+
+NOTE: If you are using JBoss, you'll need to declare the `webjars-locator-jboss-vfs`
+dependency instead of the `webjars-locator`; otherwise all Webjars resolve as a `404`.
+
+To use cache bursting, the following configuration will configure a cache busting
+solution for all static resources, effectively adding a content hash in URLs, such as
 `<link href="/css/spring-2a2d595e6ed9a0b24f027f2b63b134d6.css"/>`:
 
 [source,properties,indent=0,subs="verbatim,quotes,attributes"]
@@ -4055,7 +4059,7 @@ resolved against their provided names.
 Apache Artemis was formed in 2015 when HornetQ was donated to the Apache Foundation. Make
 sure to use that rather than the deprecated HornetQ support.
 
-NOTE: You should not try and use Artemis and HornetQ and the same time.
+NOTE: You should not try and use Artemis and HornetQ at the same time.
 
 Spring Boot can auto-configure a `ConnectionFactory` when it detects that Artemis is
 available on the classpath. If the broker is present, an embedded broker is started and
@@ -5365,11 +5369,27 @@ automatically generate the default snippets:
 ==== Using Spock to test Spring Boot applications
 If you wish to use Spock to test a Spring Boot application you should add a dependency
 on Spock's `spock-spring` module to your application's build. `spock-spring` integrates
-Spring's test framework into Spock.
+Spring's test framework into Spock. Exactly how you can use Spock to test a Spring Boot
+application depends on the version of Spock that you are using.
 
-NOTE: The annotations <<boot-features-testing-spring-boot-applications,described above>>
-can be used with Spock, i.e. you can annotate your `Specification` with
+NOTE: Spring Boot provides dependency management for Spock 1.0. If you wish to use Spock
+1.1 you should <<howto.adoc#howto-customize-dependency-versions,override the
+`spock.version` property>> in your `build.gradle` or `pom.xml` file.
+
+When using Spock 1.1, the annotations <<boot-features-testing-spring-boot-applications,
+described above>> can only be used and you can annotate your `Specification` with
 `@SpringBootTest` to suit the needs of your tests.
+
+When using Spock 1.0, `@SpringBootTest` will not work for a web project. You need to use
+`@SpringApplicationConfiguration` and `@WebIntegrationTest(randomPort = true)`. Being
+unable to use `@SpringBootTest` means that you also lose the auto-configured
+`TestRestTemplate` bean. You can create an equivalent bean yourself using the following
+configuration:
+
+[source,java,indent=0]
+----
+include::{code-examples}/test/spock/SpockTestRestTemplateExample.java[tag=test-rest-template-configuration]
+----
 
 
 
