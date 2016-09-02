@@ -22,6 +22,30 @@ can send us a {github-code}[pull request].
 == Spring Boot application
 
 
+[[howto-failure-analyzer]]
+=== Create your own FailureAnalyzer
+{dc-spring-boot}/diagnostics/FailureAnalyzer.{dc-ext}[[`FailureAnalyzer`] is a great way
+to intercept an exception on startup and turn it into a human-readable message, wrapped
+into a {dc-spring-boot}/diagnostics/FailureAnalysis.{dc-ext}[[`FailureAnalysis`]. Spring
+Boot provides such analyzer for application context related exceptions, JSR-303
+validations and more. It is actually very easy to create your own.
+
+`AbstractFailureAnalyzer` is a convenient extension of `FailureAnalyzer` that checks the
+presence of a specified exception type in the exception to handle. You can extend from
+that so that your implementation gets a chance to handle the exception only when it is
+actually present. If for whatever reason you can't handle the exception, return `null`
+to let another implementation a chance to handle the exception.
+
+`FailureAnalyzer` implementations are to be registered in a `META-INF/spring.factories`:
+the following registers `ProjectConstraintViolationFailureAnalyzer`:
+
+[source,properties,indent=0]
+----
+	org.springframework.boot.diagnostics.FailureAnalyzer=\
+	com.example.ProjectConstraintViolationFailureAnalyzer
+----
+
+
 
 [[howto-troubleshoot-auto-configuration]]
 === Troubleshoot auto-configuration
@@ -1243,7 +1267,7 @@ modules when you add new features to your application.
 
 If you want to replace the default `ObjectMapper` completely, either define a `@Bean` of
 that type and mark it as `@Primary`, or, if you prefer the builder-based
-approachd, define a `Jackson2ObjectMapperBuilder` `@Bean`. Note that in either case this
+approach, define a `Jackson2ObjectMapperBuilder` `@Bean`. Note that in either case this
 will disable all auto-configuration of the `ObjectMapper.
 
 If you provide any `@Beans` of type `MappingJackson2HttpMessageConverter` then
@@ -1642,15 +1666,14 @@ a| `log4j2.json` +
 [[howto-configure-a-datasource]]
 === Configure a DataSource
 To override the default settings just define a `@Bean` of your own of type `DataSource`.
-Spring Boot provides a utility builder class `DataSourceBuilder` that can be used
-to create one of the standard ones (if it is on the classpath), or you can just create
-your own, and bind it to a set of `Environment` properties as explained in
-<<spring-boot-features.adoc#boot-features-external-config-3rd-party-configuration>>, e.g.
+As explained in
+<<spring-boot-features.adoc#boot-features-external-config-3rd-party-configuration>> you
+can easily bind it to a set of `Environment` properties:
 
 [source,java,indent=0,subs="verbatim,quotes,attributes"]
 ----
 	@Bean
-	@ConfigurationProperties(prefix="datasource.mine")
+	@ConfigurationProperties(prefix="datasource.fancy")
 	public DataSource dataSource() {
 		return new FancyDataSource();
 	}
@@ -1658,10 +1681,37 @@ your own, and bind it to a set of `Environment` properties as explained in
 
 [source,properties,indent=0]
 ----
-	datasource.mine.jdbcUrl=jdbc:h2:mem:mydb
-	datasource.mine.user=sa
+	datasource.fancy.jdbcUrl=jdbc:h2:mem:mydb
+	datasource.fancy.username=sa
+	datasource.fancy.poolSize=30
+----
+
+Spring Boot also provides a utility builder class `DataSourceBuilder` that can be used
+to create one of the standard data sources (if it is on the classpath), or you can just
+create your own. If you want to reuse the customizations of `DataSourceProperties`, you
+can easily initialize a `DataSourceBuilder` from it:
+
+[source,java,indent=0,subs="verbatim,quotes,attributes"]
+----
+	@Bean
+	@ConfigurationProperties(prefix="datasource.mine")
+	public DataSource dataSource(DataSourceProperties properties) {
+		return properties.initializeDataSourceBuilder()
+				// additional customizations
+				.build();
+	}
+----
+
+[source,properties,indent=0]
+----
+	spring.datasource.url=jdbc:h2:mem:mydb
+	spring.datasource.username=sa
 	datasource.mine.poolSize=30
 ----
+
+In this scenario, you keep the standard properties exposed by Spring Boot with your
+custom `DataSource` arrangement. By adding `@ConfigurationProperties`, you can also
+expose additional implementation-specific settings in a dedicated namespace.
 
 See _<<spring-boot-features.adoc#boot-features-configure-datasource>>_ in the
 '`Spring Boot features`' section and the
@@ -2740,7 +2790,7 @@ Check {spring-boot-maven-plugin-site}/examples/run-debug.html[this example] for 
 [[howto-remote-debug-gradle-run]]
 === Remote debug a Spring Boot application started with Gradle
 To attach a remote debugger to a Spring Boot application started with Gradle you can use
-the `jvmArgs` property of bootRun task OR `--debug-jvm` command line option.
+the `jvmArgs` property of `bootRun` task or `--debug-jvm` command line option.
 
 `build.gradle`:
 

@@ -46,6 +46,29 @@ When your application starts you should see something similar to the following:
 By default `INFO` logging messages will be shown, including some relevant startup details
 such as the user that launched the application.
 
+If your application fails to start, registered `FailureAnalyzers` get a chance to provide
+a dedicated error message and a concrete action to fix the problem. For instance if you
+start a web application on port `8080` and that port is already in use, you should see
+something similar to the following:
+
+[indent=0]
+----
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Embedded servlet container failed to start. Port 8080 was already in use.
+
+Action:
+
+Identify and stop the process that's listening on port 8080 or configure this application to listen on another port.
+----
+
+NOTE: Spring Boot provides numerous `FailureAnalyzer` implementations and you can
+<<howto.adoc#howto-failure-analyzer,add your own>> very easily.
+
 
 [[boot-features-banner]]
 === Customizing the Banner
@@ -891,8 +914,8 @@ be used by IDEs. See the <<configuration-metadata>> appendix for details.
 [[boot-features-external-config-3rd-party-configuration]]
 ==== Third-party configuration
 As well as using `@ConfigurationProperties` to annotate a class, you can also use it
-on `@Bean` methods. This can be particularly useful when you want to bind properties to
-third-party components that are outside of your control.
+on public `@Bean` methods. This can be particularly useful when you want to bind
+properties to third-party components that are outside of your control.
 
 To configure a bean from the `Environment` properties, add `@ConfigurationProperties` to
 its bean registration:
@@ -3951,7 +3974,10 @@ size of 500 and a _time to live_ of 10 minutes
 ----
 
 Besides, if a `com.github.benmanes.caffeine.cache.CacheLoader` bean is defined, it is
-automatically associated to the `CaffeineCacheManager`.
+automatically associated to the `CaffeineCacheManager`. Since the `CacheLoader` is
+going to be associated to _all_ caches managed by the cache manager, it must be defined
+as `CacheLoader<Object, Object>`. Any other generic type will be ignored by the
+auto-configuration.
 
 
 
@@ -3975,7 +4001,10 @@ size of 500 and a _time to live_ of 10 minutes
 ----
 
 Besides, if a `com.google.common.cache.CacheLoader` bean is defined, it is automatically
-associated to the `GuavaCacheManager`.
+associated to the `GuavaCacheManager`. Since the `CacheLoader` is going to be associated
+to _all_ caches managed by the cache manager, it must be defined as
+`CacheLoader<Object, Object>`. Any other generic type will be ignored by the
+auto-configuration.
 
 
 
@@ -5198,7 +5227,8 @@ Data JPA tests may also inject a
 {sc-spring-boot-test-autoconfigure}/orm/jpa/TestEntityManager.{sc-ext}[`TestEntityManager`]
 bean which provides an alternative to the standard JPA `EntityManager` specifically
 designed for tests. If you want to use `TestEntityManager` outside of `@DataJpaTests` you
-can also use the `@AutoConfigureTestEntityManager` annotation.
+can also use the `@AutoConfigureTestEntityManager` annotation. A `JdbcTemplate` is also
+available should you need that.
 
 [source,java,indent=0]
 ----
@@ -5488,9 +5518,10 @@ public class MyTest {
 }
 ----
 
-If you are using the `@SpringBootTest` annotation, you can just inject a fully configured
-`TestRestTemplate` and start using it. If necessary, additional customizations can be
-applied via the `RestTemplateBuilder` bean:
+If you are using the `@SpringBootTest` annotation with `WebEnvironment.RANDOM_PORT` or
+`WebEnvironment.DEFINED_PORT`, you can just inject a fully configured `TestRestTemplate`
+and start using it. If necessary, additional customizations can be applied via the
+`RestTemplateBuilder` bean:
 
 [source,java,indent=0]
 ----
@@ -5507,7 +5538,7 @@ public class MyTest {
 		assertThat(headers.getLocation().toString(), containsString("myotherhost"));
 	}
 
-	@TestConfig
+	@TestConfiguration
 	static class Config {
 
 		@Bean
