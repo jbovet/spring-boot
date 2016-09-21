@@ -39,7 +39,8 @@ org.springframework.boot.test.autoconfigure.restdocs.RestDocsAutoConfiguration
 
 # AutoConfigureTestDatabase auto-configuration imports
 org.springframework.boot.test.autoconfigure.orm.jpa.AutoConfigureTestDatabase=\
-org.springframework.boot.test.autoconfigure.orm.jpa.TestDatabaseAutoConfiguration
+org.springframework.boot.test.autoconfigure.orm.jpa.TestDatabaseAutoConfiguration,\
+org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
 
 # AutoConfigureTestEntityManager auto-configuration imports
 org.springframework.boot.test.autoconfigure.orm.jpa.AutoConfigureTestEntityManager=\
@@ -66,14 +67,20 @@ org.springframework.boot.autoconfigure.thymeleaf.ThymeleafAutoConfiguration,\
 org.springframework.boot.autoconfigure.web.HttpMessageConvertersAutoConfiguration,\
 org.springframework.boot.autoconfigure.web.WebMvcAutoConfiguration
 
+# DefaultTestExecutionListenersPostProcessors
+org.springframework.boot.test.context.DefaultTestExecutionListenersPostProcessor=\
+org.springframework.boot.test.autoconfigure.SpringBootDependencyInjectionTestExecutionListener$PostProcessor
+
 # Spring Test ContextCustomizerFactories
 org.springframework.test.context.ContextCustomizerFactory=\
 org.springframework.boot.test.autoconfigure.OverrideAutoConfigurationContextCustomizerFactory,\
 org.springframework.boot.test.autoconfigure.filter.TypeExcludeFiltersContextCustomizerFactory,\
-org.springframework.boot.test.autoconfigure.properties.PropertyMappingContextCustomizerFactory
+org.springframework.boot.test.autoconfigure.properties.PropertyMappingContextCustomizerFactory,\
+org.springframework.boot.test.autoconfigure.web.servlet.WebDriverContextCustomizerFactory
 
 # Test Execution Listeners
 org.springframework.test.context.TestExecutionListener=\
-org.springframework.boot.test.autoconfigure.AutoConfigureReportTestExecutionListener,\
 org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener,\
-org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener
+org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener,\
+org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener,\
+org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener

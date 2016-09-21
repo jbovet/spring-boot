@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-dependencies</artifactId>
-		<version>1.4.1.BUILD-SNAPSHOT</version>
+		<version>1.5.0.BUILD-SNAPSHOT</version>
 		<relativePath>../spring-boot-dependencies</relativePath>
 	</parent>
 	<artifactId>spring-boot-parent</artifactId>
@@ -70,7 +70,7 @@
 			<dependency>
 				<groupId>io.spring.gradle</groupId>
 				<artifactId>dependency-management-plugin</artifactId>
-				<version>0.6.0.RELEASE</version>
+				<version>0.6.1.RELEASE</version>
 			</dependency>
 			<dependency>
 				<groupId>jline</groupId>

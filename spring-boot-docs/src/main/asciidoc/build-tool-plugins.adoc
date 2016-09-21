@@ -373,10 +373,10 @@ want the other Boot features but not this one)
 
 |`classifier`
 |A file name segment (before the extension) to add to the archive, so that the original is
- preserved in its original location. Defaults to null in which case the archive is
+ preserved in its original location. Defaults to `null` in which case the archive is
  repackaged in place. The default is convenient for many purposes, but if you want to use
- the original jar as a dependency in another project, it's best to use an extension to
- define the executable archive.
+ the original jar as a dependency in another project you must use a classifier to define
+ the executable archive.
 
 |`withJarTask`
 |The name or value of the `Jar` task (defaults to all tasks of type `Jar`) which is used
@@ -450,7 +450,7 @@ BootRepackage task and instructed it to work with only `clientJar` task and
 ----
 
 The configuration that we are referring to in `BootRepackage` is a normal
-http://www.gradle.org/docs/current/dsl/org.gradle.api.artifacts.Configuration.html[Gradle
+{gradle-dsl}/org.gradle.api.artifacts.Configuration.html[Gradle
 configuration]. In the above example we created a new configuration named
 `mycustomconfiguration` instructing it to derive from a `runtime` and exclude the `log4j`
 group. If the `clientBoot` task is executed, the repackaged boot jar will have all
@@ -594,8 +594,7 @@ using Gradle and how you're trying to publish the artifacts.
 ==== Configuring Gradle to produce a pom that inherits dependency management
 The following is an example of configuring Gradle to generate a pom that inherits
 from `spring-boot-starter-parent`. Please refer to the
-http://www.gradle.org/docs/current/userguide/userguide.html[Gradle User Guide] for
-further information.
+{gradle-user-guide}/userguide.html[Gradle User Guide] for further information.
 
 [source,groovy,indent=0,subs="verbatim,attributes"]
 ----

@@ -772,6 +772,29 @@ HTTPS connector:
 
 
 
+[[howto-use-tomcat-legacycookieprocessor]]
+=== Use Tomcat's LegacyCookieProcessor
+The embedded Tomcat used by Spring Boot does not support "Version 0" of the Cookie
+format out of the box, and you may see the following error:
+
+[indent=0]
+----
+	java.lang.IllegalArgumentException: An invalid character [32] was present in the Cookie value
+----
+
+If at all possible, you should consider updating your code to only store values
+compliant with later Cookie specifications. If, however, you're unable to change the
+way that cookies are written, you can instead configure Tomcat to use a
+`LegacyCookieProcessor`. To switch to the `LegacyCookieProcessor` use an
+`EmbeddedServletContainerCustomizer` bean that adds a `TomcatContextCustomizer`:
+
+[source,java,indent=0]
+----
+include::{code-examples}/context/embedded/TomcatLegacyCookieProcessorExample.java[tag=customizer]
+----
+
+
+
 [[howto-use-jetty-instead-of-tomcat]]
 === Use Jetty instead of Tomcat
 The Spring Boot starters (`spring-boot-starter-web` in particular) use Tomcat as an
@@ -1243,7 +1266,7 @@ Jackson which map onto properties in the environment:
 |`spring.jackson.serialization.<feature_name>=true\|false`
 
 |`com.fasterxml.jackson.annotation.JsonInclude.Include`
-|`spring.jackson.serialization-inclusion=always\|non_null\|non_absent\|non_default\|non_empty`
+|`spring.jackson.default-property-inclusion=always\|non_null\|non_absent\|non_default\|non_empty`
 |===
 
 For example, to enable pretty print, set `spring.jackson.serialization.indent_output=true`.
@@ -2620,14 +2643,24 @@ details.
 
 
 [[howto-create-an-additional-executable-jar]]
-=== Create an additional executable JAR
-If you want to use your project as a library jar for other projects to depend on, and in
-addition have an executable (e.g. demo) version of it, you will want to configure the
-build in a slightly different way.
+=== Use a Spring Boot application as a dependency
+Like a war file, a Spring Boot application is not intended to be used as a dependency. If
+your application contains classes that you want to share with other projects, the
+recommended approach is to move that code into a separate module. The separate module can
+then be depended upon by your application and other projects.
 
-For Maven the normal JAR plugin and the Spring Boot plugin both have a '`classifier`'
-configuration that you can add to create an additional JAR. Example (using the Spring
-Boot Starter Parent to manage the plugin versions and other configuration defaults):
+If you cannot rearrange your code as recommended above, Spring Boot's Maven and Gradle
+plugins must be configured to produce a separate artifact that is suitable for use as a
+dependency. The executable archive cannot be used as a dependency as the
+<<appendix-executable-jar-format.adoc#executable-jar-jar-file-structure,exectuable jar
+format>> packages application classes in `BOOT-INF/classes`. This means
+that they cannot be found when the executable jar is used as a dependency.
+
+To produce the two artifacts, one that can be used as a dependency and one that is
+executable, a classifier must be specified. This classifier is applied to the name of the
+executable archive, leaving the default archive for use as dependency.
+
+To configure a classifier of `exec` in Maven, the following configuration can be used:
 
 [source,xml,indent=0,subs="verbatim,quotes,attributes"]
 ----
@@ -2644,10 +2677,7 @@ Boot Starter Parent to manage the plugin versions and other configuration defaul
 	</build>
 ----
 
-Two jars are produced, the default one, and an executable one using the Boot plugin with
-classifier '`exec`'.
-
-For Gradle users the steps are similar. Example:
+And when using Gradle, the following configuration can be used:
 
 [source,groovy,indent=0,subs="verbatim,attributes"]
 ----

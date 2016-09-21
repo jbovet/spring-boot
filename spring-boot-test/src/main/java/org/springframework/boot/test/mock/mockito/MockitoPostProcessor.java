@@ -72,6 +72,7 @@ import org.springframework.util.StringUtils;
  *
  * @author Phillip Webb
  * @author Andy Wilkinson
+ * @author Stephane Nicoll
  * @since 1.4.0
  */
 public class MockitoPostProcessor extends InstantiationAwareBeanPostProcessorAdapter
@@ -206,6 +207,9 @@ public class MockitoPostProcessor extends InstantiationAwareBeanPostProcessorAda
 		definition.setFactoryMethodName("createMock");
 		definition.getConstructorArgumentValues().addIndexedArgumentValue(0,
 				mockDefinition);
+		if (mockDefinition.getQualifier() != null) {
+			mockDefinition.getQualifier().applyTo(definition);
+		}
 		return definition;
 	}
 
@@ -225,18 +229,17 @@ public class MockitoPostProcessor extends InstantiationAwareBeanPostProcessorAda
 		if (StringUtils.hasLength(mockDefinition.getName())) {
 			return mockDefinition.getName();
 		}
-		String[] existingBeans = getExistingBeans(beanFactory,
-				mockDefinition.getTypeToMock());
-		if (ObjectUtils.isEmpty(existingBeans)) {
+		Set<String> existingBeans = findCandidateBeans(beanFactory, mockDefinition);
+		if (existingBeans.isEmpty()) {
 			return this.beanNameGenerator.generateBeanName(beanDefinition, registry);
 		}
-		if (existingBeans.length == 1) {
-			return existingBeans[0];
+		if (existingBeans.size() == 1) {
+			return existingBeans.iterator().next();
 		}
 		throw new IllegalStateException(
 				"Unable to register mock bean " + mockDefinition.getTypeToMock()
-						+ " expected a single existing bean to replace but found "
-						+ new TreeSet<String>(Arrays.asList(existingBeans)));
+						+ " expected a single matching bean to replace but found "
+						+ existingBeans);
 	}
 
 	private void registerSpy(ConfigurableListableBeanFactory beanFactory,
@@ -248,6 +251,19 @@ public class MockitoPostProcessor extends InstantiationAwareBeanPostProcessorAda
 		else {
 			registerSpies(definition, field, existingBeans);
 		}
+	}
+
+	private Set<String> findCandidateBeans(ConfigurableListableBeanFactory beanFactory,
+			MockDefinition mockDefinition) {
+		QualifierDefinition qualifier = mockDefinition.getQualifier();
+		Set<String> candidates = new TreeSet<String>();
+		for (String candidate : getExistingBeans(beanFactory,
+				mockDefinition.getTypeToMock())) {
+			if (qualifier == null || qualifier.matches(beanFactory, candidate)) {
+				candidates.add(candidate);
+			}
+		}
+		return candidates;
 	}
 
 	private String[] getExistingBeans(ConfigurableListableBeanFactory beanFactory,

@@ -40,8 +40,8 @@ class SpyDefinition extends Definition {
 	private final ResolvableType typeToSpy;
 
 	SpyDefinition(String name, ResolvableType typeToSpy, MockReset reset,
-			boolean proxyTargetAware) {
-		super(name, reset, proxyTargetAware);
+			boolean proxyTargetAware, QualifierDefinition qualifier) {
+		super(name, reset, proxyTargetAware, qualifier);
 		Assert.notNull(typeToSpy, "TypeToSpy must not be null");
 		this.typeToSpy = typeToSpy;
 

@@ -38,6 +38,7 @@ import org.springframework.util.StringUtils;
  * class.
  *
  * @author Phillip Webb
+ * @author Stephane Nicoll
  */
 class DefinitionsParser {
 
@@ -92,7 +93,8 @@ class DefinitionsParser {
 		for (ResolvableType typeToMock : typesToMock) {
 			MockDefinition definition = new MockDefinition(annotation.name(), typeToMock,
 					annotation.extraInterfaces(), annotation.answer(),
-					annotation.serializable(), annotation.reset());
+					annotation.serializable(), annotation.reset(),
+					QualifierDefinition.forElement(element));
 			addDefinition(element, definition, "mock");
 		}
 	}
@@ -107,7 +109,8 @@ class DefinitionsParser {
 		}
 		for (ResolvableType typeToSpy : typesToSpy) {
 			SpyDefinition definition = new SpyDefinition(annotation.name(), typeToSpy,
-					annotation.reset(), annotation.proxyTargetAware());
+					annotation.reset(), annotation.proxyTargetAware(),
+					QualifierDefinition.forElement(element));
 			addDefinition(element, definition, "spy");
 		}
 	}

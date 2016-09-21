@@ -46,6 +46,10 @@ When your application starts you should see something similar to the following:
 By default `INFO` logging messages will be shown, including some relevant startup details
 such as the user that launched the application.
 
+
+
+[boot-features-startup-failure]
+=== Startup failure
 If your application fails to start, registered `FailureAnalyzers` get a chance to provide
 a dedicated error message and a concrete action to fix the problem. For instance if you
 start a web application on port `8080` and that port is already in use, you should see
@@ -68,6 +72,20 @@ something similar to the following:
 
 NOTE: Spring Boot provides numerous `FailureAnalyzer` implementations and you can
 <<howto.adoc#howto-failure-analyzer,add your own>> very easily.
+
+If no failure analyzers are able to handle the exception, you can still display the full
+auto-configuration report to better understand what went wrong. To do so you need to
+<<boot-features-external-config,enable the `debug` property>> or
+<<boot-features-custom-log-levels,enable `DEBUG` logging>> for
+`org.springframework.boot.autoconfigure.logging.AutoConfigurationReportLoggingInitializer`.
+
+For instance, if you are running your application using `java -jar` you can enable the
+`debug` property as follows:
+
+[indent=0,subs="attributes"]
+----
+	$ java -jar myproject-0.0.1-SNAPSHOT.jar --debug
+----
 
 
 
@@ -351,8 +369,12 @@ via `@ConfigurationProperties`.
 Spring Boot uses a very particular `PropertySource` order that is designed to allow
 sensible overriding of values. Properties are considered in the following order:
 
+. <<using-boot-devtools-globalsettings,Devtools global settings properties>>
+  on your home directory (`~/.spring-boot-devtools.properties` when devtools is active).
 . {spring-javadoc}/test/context/TestPropertySource.{dc-ext}[`@TestPropertySource`]
   annotations on your tests.
+. {dc-spring-boot-test}/context/SpringBootTest.{dc-ext}[`@SpringBootTest#properties`]
+  annotation attribute on your tests.
 . Command line arguments.
 . Properties from `SPRING_APPLICATION_JSON` (inline JSON embedded in an environment
   variable or system property)
@@ -1048,9 +1070,13 @@ as `@Valid` to trigger its validation. For example, building upon the above
 ----
 
 You can also add a custom Spring `Validator` by creating a bean definition called
-`configurationPropertiesValidator`. There is a
-{github-code}/spring-boot-samples/spring-boot-sample-property-validation[Validation sample]
-so you can see how to set things up.
+`configurationPropertiesValidator`. The `@Bean` method should be declared `static`. The
+configuration properties validator is created very early in the application's lifecycle
+and declaring the `@Bean` method as static allows the bean to be created without having to
+instantiate the `@Configuration` class. This avoids any problems that may be caused by
+early instantiation. There is a
+{github-code}/spring-boot-samples/spring-boot-sample-property-validation[property
+validation sample] so you can see how to set things up.
 
 TIP: The `spring-boot-actuator` module includes an endpoint that exposes all
 `@ConfigurationProperties` beans. Simply point your web browser to `/configprops`
@@ -2355,7 +2381,9 @@ explicitly configure the paths that you do want to override.
 [[boot-features-security-oauth2]]
 === OAuth2
 If you have `spring-security-oauth2` on your classpath you can take advantage of some
-auto-configuration to make it easy to set up Authorization or Resource Server.
+auto-configuration to make it easy to set up Authorization or Resource Server. For full
+details, see the {spring-security-oauth2-reference}[Spring Security OAuth 2 Developers
+Guide].
 
 
 
@@ -2688,6 +2716,9 @@ DataSource configuration is controlled by external configuration properties in
 	spring.datasource.password=dbpass
 	spring.datasource.driver-class-name=com.mysql.jdbc.Driver
 ----
+
+NOTE: You should at least specify the url using the `spring.datasource.url` property or
+Spring Boot will attempt to auto-configure an embedded database.
 
 TIP: You often won't need to specify the `driver-class-name` since Spring boot can deduce
 it for most databases from the `url`.
@@ -3760,14 +3791,15 @@ If you haven't defined a bean of type `CacheManager` or a `CacheResolver` named
 providers (in this order):
 
 * <<boot-features-caching-provider-generic,Generic>>
-* <<boot-features-caching-provider-jcache,JCache (JSR-107)>>
+* <<boot-features-caching-provider-jcache,JCache (JSR-107)>> (EhCache 3, Hazelcast,
+  Infinispan, etc)
 * <<boot-features-caching-provider-ehcache2,EhCache 2.x>>
 * <<boot-features-caching-provider-hazelcast,Hazelcast>>
 * <<boot-features-caching-provider-infinispan,Infinispan>>
 * <<boot-features-caching-provider-couchbase,Couchbase>>
 * <<boot-features-caching-provider-redis,Redis>>
 * <<boot-features-caching-provider-caffeine,Caffeine>>
-* <<boot-features-caching-provider-guava,Guava>>
+* <<boot-features-caching-provider-guava,Guava>> (deprecated)
 * <<boot-features-caching-provider-simple,Simple>>
 
 TIP: It is also possible to _force_ the cache provider to use via the `spring.cache.type`
@@ -3808,12 +3840,16 @@ Generic caching is used if the context defines _at least_ one
 
 
 [[boot-features-caching-provider-jcache]]
-==== JCache
+==== JCache (JSR-107)
 JCache is bootstrapped via the presence of a `javax.cache.spi.CachingProvider` on the
-classpath (i.e. a JSR-107 compliant caching library). It might happen that more than one
-provider is present, in which case the provider must be explicitly specified. Even if the
-JSR-107 standard does not enforce a standardized way to define the location of the
-configuration file, Spring Boot does its best to accommodate with implementation details.
+classpath (i.e. a JSR-107 compliant caching library). There are various compliant
+libraries out there and Spring Boot provides dependency management for Ehcache 3,
+Hazelcast and Infinispan). Any other compliant library can be added as well.
+
+It might happen that more than one provider is present, in which case the provider must
+be explicitly specified. Even if the JSR-107 standard does not enforce a standardized
+way to define the location of the configuration file, Spring Boot does its best to
+accommodate with implementation details.
 
 [source,properties,indent=0]
 ----
@@ -3983,7 +4019,7 @@ auto-configuration.
 
 
 [[boot-features-caching-provider-guava]]
-==== Guava
+==== Guava (deprecated)
 If Guava is present, a `GuavaCacheManager` is auto-configured. Caches can be created
 on startup using the `spring.cache.cache-names` property and customized by one of the
 following (in this order):
@@ -4909,8 +4945,8 @@ annotations that can be used on classes in `src/test/java` to indicate that they
 not be picked up by scanning.
 
 NOTE: `@TestComponent` and `@TestConfiguration` are only needed on top level classes. If
-you define `@Configuration` or `@Component` as inner-classes within a test, they will be
-automatically filtered.
+you define `@Configuration` or `@Component` as inner-classes within a test (any class
+that has `@Test` methods or `@RunWith`), they will be automatically filtered.
 
 NOTE: If you directly use `@ComponentScan` (i.e. not via `@SpringBootApplication`) you
 will need to register the `TypeExcludeFilter` with it. See
