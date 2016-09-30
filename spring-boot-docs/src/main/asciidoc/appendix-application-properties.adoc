@@ -71,7 +71,6 @@ content into your application; rather pick only the properties that you need.
 	spring.cache.caffeine.spec= # The spec to use to create caches. Check CaffeineSpec for more details on the spec format.
 	spring.cache.couchbase.expiration=0 # Entry expiration in milliseconds. By default the entries never expire.
 	spring.cache.ehcache.config= # The location of the configuration file to use to initialize EhCache.
-	spring.cache.guava.spec= # The spec to use to create caches. Check CacheBuilderSpec for more details on the spec format.
 	spring.cache.hazelcast.config= # The location of the configuration file to use to initialize Hazelcast.
 	spring.cache.infinispan.config= # The location of the configuration file to use to initialize Infinispan.
 	spring.cache.jcache.config= # The location of the configuration file to use to initialize the cache manager.
@@ -276,6 +275,7 @@ content into your application; rather pick only the properties that you need.
 	spring.http.encoding.force= # Force the encoding to the configured charset on HTTP requests and responses.
 	spring.http.encoding.force-request= # Force the encoding to the configured charset on HTTP requests. Defaults to true when "force" has not been specified.
 	spring.http.encoding.force-response= # Force the encoding to the configured charset on HTTP responses.
+	spring.http.encoding.mapping= # Locale to Encoding mapping.
 
 	# MULTIPART ({sc-spring-boot-autoconfigure}/web/MultipartProperties.{sc-ext}[MultipartProperties])
 	spring.http.multipart.enabled=true # Enable support of multi-part uploads.
@@ -405,28 +405,6 @@ content into your application; rather pick only the properties that you need.
 	spring.thymeleaf.suffix=.html # Suffix that gets appended to view names when building a URL.
 	spring.thymeleaf.template-resolver-order= # Order of the template resolver in the chain.
 	spring.thymeleaf.view-names= # Comma-separated list of view names that can be resolved.
-
-	# VELOCITY TEMPLATES ({sc-spring-boot-autoconfigure}/velocity/VelocityAutoConfiguration.{sc-ext}[VelocityAutoConfiguration])
-	spring.velocity.allow-request-override=false # Set whether HttpServletRequest attributes are allowed to override (hide) controller generated model attributes of the same name.
-	spring.velocity.allow-session-override=false # Set whether HttpSession attributes are allowed to override (hide) controller generated model attributes of the same name.
-	spring.velocity.cache= # Enable template caching.
-	spring.velocity.charset=UTF-8 # Template encoding.
-	spring.velocity.check-template-location=true # Check that the templates location exists.
-	spring.velocity.content-type=text/html # Content-Type value.
-	spring.velocity.date-tool-attribute= # Name of the DateTool helper object to expose in the Velocity context of the view.
-	spring.velocity.enabled=true # Enable MVC view resolution for this technology.
-	spring.velocity.expose-request-attributes=false # Set whether all request attributes should be added to the model prior to merging with the template.
-	spring.velocity.expose-session-attributes=false # Set whether all HttpSession attributes should be added to the model prior to merging with the template.
-	spring.velocity.expose-spring-macro-helpers=true # Set whether to expose a RequestContext for use by Spring's macro library, under the name "springMacroRequestContext".
-	spring.velocity.number-tool-attribute= # Name of the NumberTool helper object to expose in the Velocity context of the view.
-	spring.velocity.prefer-file-system-access=true # Prefer file system access for template loading. File system access enables hot detection of template changes.
-	spring.velocity.prefix= # Prefix that gets prepended to view names when building a URL.
-	spring.velocity.properties.*= # Additional velocity properties.
-	spring.velocity.request-context-attribute= # Name of the RequestContext attribute for all views.
-	spring.velocity.resource-loader-path=classpath:/templates/ # Template path.
-	spring.velocity.suffix=.vm # Suffix that gets appended to view names when building a URL.
-	spring.velocity.toolbox-config-location= # Velocity Toolbox config location. For instance `/WEB-INF/toolbox.xml`
-	spring.velocity.view-names= # White list of view names that can be resolved.
 
 	# SPRING WEB SERVICES ({sc-spring-boot-autoconfigure}/webservices/WebServicesProperties.{sc-ext}[WebServicesProperties])
 	spring.webservices.path=/services # Path that serves as the base URI for the services.
@@ -852,20 +830,6 @@ content into your application; rather pick only the properties that you need.
 	spring.batch.job.names= # Comma-separated list of job names to execute on startup (For instance `job1,job2`). By default, all Jobs found in the context are executed.
 	spring.batch.schema=classpath:org/springframework/batch/core/schema-@@platform@@.sql # Path to the SQL file to use to initialize the database schema.
 	spring.batch.table-prefix= # Table prefix for all the batch meta-data tables.
-
-	# HORNETQ ({sc-spring-boot-autoconfigure}/jms/hornetq/HornetQProperties.{sc-ext}[HornetQProperties])
-	spring.hornetq.embedded.cluster-password= # Cluster password. Randomly generated on startup by default.
-	spring.hornetq.embedded.data-directory= # Journal file directory. Not necessary if persistence is turned off.
-	spring.hornetq.embedded.enabled=true # Enable embedded mode if the HornetQ server APIs are available.
-	spring.hornetq.embedded.persistent=false # Enable persistent store.
-	spring.hornetq.embedded.queues= # Comma-separated list of queues to create on startup.
-	spring.hornetq.embedded.server-id= # Server id. By default, an auto-incremented counter is used.
-	spring.hornetq.embedded.topics= # Comma-separated list of topics to create on startup.
-	spring.hornetq.host=localhost # HornetQ broker host.
-	spring.hornetq.mode= # HornetQ deployment mode, auto-detected by default.
-	spring.hornetq.password= # Login password of the broker.
-	spring.hornetq.port=5445 # HornetQ broker port.
-	spring.hornetq.user= # Login user of the broker.
 
 	# JMS ({sc-spring-boot-autoconfigure}/jms/JmsProperties.{sc-ext}[JmsProperties])
 	spring.jms.jndi-name= # Connection factory JNDI name. When set, takes precedence to others connection factory auto-configurations.
