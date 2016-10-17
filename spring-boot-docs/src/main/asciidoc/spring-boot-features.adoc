@@ -2664,6 +2664,14 @@ http://hsqldb.org/[HSQL] and http://db.apache.org/derby/[Derby] databases. You d
 to provide any connection URLs, simply include a build dependency to the embedded database
 that you want to use.
 
+[NOTE]
+====
+If you are using this feature in your tests, you may notice that the same database is
+reused by your whole test suite regardless of the number of application contexts that
+you use. If you want to make sure that each context has a separate embedded database,
+you should set `spring.datasource.generate-unique-name` to `true`.
+====
+
 For example, typical POM dependencies would be:
 
 [source,xml,indent=0]
@@ -2700,9 +2708,8 @@ Here's the algorithm for choosing a specific implementation:
 * We prefer the Tomcat pooling `DataSource` for its performance and concurrency, so if
   that is available we always choose it.
 * Otherwise, if HikariCP is available we will use it.
-* If neither the Tomcat pooling datasource nor HikariCP are available and if Commons DBCP
-  is available we will use it, but we don't recommend it in production.
-* Lastly, if Commons DBCP2 is available we will use it.
+* If neither the Tomcat pooling datasource nor HikariCP are available and if Commons
+  DBCP2 is available we will use it.
 
 If you use the `spring-boot-starter-jdbc` or `spring-boot-starter-data-jpa`
 '`starters`' you will automatically get a dependency to `tomcat-jdbc`.
@@ -2741,9 +2748,8 @@ See {sc-spring-boot-autoconfigure}/jdbc/DataSourceProperties.{sc-ext}[`DataSourc
 for more of the supported options. These are the standard options that work regardless of
 the actual implementation. It is also possible to fine-tune implementation-specific
 settings using their respective prefix (`+spring.datasource.tomcat.*+`,
-`+spring.datasource.hikari.*+`, `+spring.datasource.dbcp.*+` and
-`+spring.datasource.dbcp2.*+`). Refer to the documentation of the connection pool
-implementation you are using for more details.
+`+spring.datasource.hikari.*+`, and `+spring.datasource.dbcp2.*+`). Refer to the
+documentation of the connection pool implementation you are using for more details.
 
 For instance, if you are using the
 http://tomcat.apache.org/tomcat-8.0-doc/jdbc-pool.html#Common_Attributes[Tomcat connection pool]
@@ -3791,9 +3797,10 @@ enabled via the `@EnableCaching` annotation.
 NOTE: If you are using the cache infrastructure with beans that are not interface-based,
 make sure to enable the `proxyTargetClass` attribute of `@EnableCaching`.
 
-TIP: Use the `spring-boot-starter-cache` '`Starter`' to quickly add required caching
-dependencies. If you are adding dependencies manually you should note that certain
-implementations are only provided by the `spring-context-support` jar.
+TIP: Use the `spring-boot-starter-cache` '`Starter`' to quickly add basic caching
+dependencies. The starter brings `spring-context-support`: if you are adding dependencies
+manually, you must include it if you intend to use the JCache, EhCache 2.x or Guava
+support.
 
 If you haven't defined a bean of type `CacheManager` or a `CacheResolver` named
 `cacheResolver` (see `CachingConfigurer`), Spring Boot tries to detect the following
@@ -3850,9 +3857,10 @@ Generic caching is used if the context defines _at least_ one
 [[boot-features-caching-provider-jcache]]
 ==== JCache (JSR-107)
 JCache is bootstrapped via the presence of a `javax.cache.spi.CachingProvider` on the
-classpath (i.e. a JSR-107 compliant caching library). There are various compliant
+classpath (i.e. a JSR-107 compliant caching library) and the `JCacheCacheManager`
+provided by the `spring-boot-starter-cache` '`Starter`'. There are various compliant
 libraries out there and Spring Boot provides dependency management for Ehcache 3,
-Hazelcast and Infinispan). Any other compliant library can be added as well.
+Hazelcast and Infinispan. Any other compliant library can be added as well.
 
 It might happen that more than one provider is present, in which case the provider must
 be explicitly specified. Even if the JSR-107 standard does not enforce a standardized
@@ -3887,8 +3895,9 @@ abstraction expects. No further customization is applied on it.
 [[boot-features-caching-provider-ehcache2]]
 ==== EhCache 2.x
 EhCache 2.x is used if a file named `ehcache.xml` can be found at the root of the
-classpath. If EhCache 2.x and such file is present it is used to bootstrap the cache
-manager. An alternate configuration file can be provide a well using:
+classpath. If EhCache 2.x, the `EhCacheCacheManager` provided by the
+`spring-boot-starter-cache` '`Starter`' and such file is present it is used to bootstrap
+the cache manager. An alternate configuration file can be provide a well using:
 
 [source,properties,indent=0]
 ----
@@ -4002,7 +4011,8 @@ recommend to keep this setting enabled if you create your own `RedisCacheManager
 [[boot-features-caching-provider-caffeine]]
 ==== Caffeine
 Caffeine is a Java 8 rewrite of Guava’s cache that supersede the Guava support. If
-Caffeine is present, a `CaffeineCacheManager` is auto-configured. Caches can be created
+Caffeine is present, a `CaffeineCacheManager` (provided by the
+`spring-boot-starter-cache` '`Starter`') is auto-configured. Caches can be created
 on startup using the `spring.cache.cache-names` property and customized by one of the
 following (in this order):
 
@@ -4896,28 +4906,7 @@ For convenience, tests that need to make REST calls to the started server can ad
 
 [source,java,indent=0]
 ----
-	import org.junit.*;
-	import org.junit.runner.*;
-	import org.springframework.boot.test.context.web.*;
-	import org.springframework.boot.test.web.client.*;
-	import org.springframework.test.context.junit4.*;
-
-	import static org.assertj.core.api.Assertions.*
-
-	@RunWith(SpringRunner.class)
-	@SpringBootTest(webEnvironment=WebEnvironment.RANDOM_PORT)
-	public class MyWebIntegrationTests {
-
-		@Autowired
-		private TestRestTemplate restTemplate;
-
-		@Test
-		public void exampleTest() {
-			String body = this.restTemplate.getForObject("/", String.class);
-			assertThat(body).isEqualTo("Hello World");
-		}
-
-	}
+include::{code-examples}/test/web/RandomPortExampleTests.java[tag=test-random-port]
 ----
 
 
@@ -5193,7 +5182,7 @@ Data JPA tests may also inject a
 bean which provides an alternative to the standard JPA `EntityManager` specifically
 designed for tests. If you want to use `TestEntityManager` outside of `@DataJpaTests` you
 can also use the `@AutoConfigureTestEntityManager` annotation. A `JdbcTemplate` is also
-available should you need that.
+available if you need that.
 
 [source,java,indent=0]
 ----

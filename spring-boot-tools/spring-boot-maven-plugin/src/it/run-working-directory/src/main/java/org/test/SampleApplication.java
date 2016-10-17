@@ -14,24 +14,13 @@
  * limitations under the License.
  */
 
-package org.springframework.boot.test.mock.mockito.example;
+package org.test;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+public class SampleApplication {
 
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.core.annotation.AliasFor;
-
-@Target({ ElementType.TYPE, ElementType.FIELD })
-@Retention(RetentionPolicy.RUNTIME)
-@Documented
-@MockBean
-public @interface MyMockBean {
-
-	@AliasFor(annotation = MockBean.class, attribute = "value")
-	Class<?> value();
+	public static void main(String[] args) {
+		String workingDirectory =  System.getProperty("user.dir");
+		System.out.println(String.format("I haz been run from %s", workingDirectory));
+	}
 
 }
