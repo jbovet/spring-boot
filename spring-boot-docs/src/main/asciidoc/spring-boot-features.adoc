@@ -1763,7 +1763,7 @@ version.
 NOTE: If you are using JBoss, you'll need to declare the `webjars-locator-jboss-vfs`
 dependency instead of the `webjars-locator`; otherwise all Webjars resolve as a `404`.
 
-To use cache bursting, the following configuration will configure a cache busting
+To use cache busting, the following configuration will configure a cache busting
 solution for all static resources, effectively adding a content hash in URLs, such as
 `<link href="/css/spring-2a2d595e6ed9a0b24f027f2b63b134d6.css"/>`:
 
@@ -1774,16 +1774,9 @@ solution for all static resources, effectively adding a content hash in URLs, su
 ----
 
 NOTE: Links to resources are rewritten at runtime in template, thanks to a
-<<<<<<< HEAD
-`ResourceUrlEncodingFilter`, auto-configured for Thymeleaf and FreeMarker. You
-should manually declare this filter when using JSPs. Other template engines aren't
-automatically supported right now, but can be with custom template macros/helpers and the
-use of the
-=======
 `ResourceUrlEncodingFilter`, auto-configured for Thymeleaf and FreeMarker. You should
 manually declare this filter when using JSPs. Other template engines aren't automatically
 supported right now, but can be with custom template macros/helpers and the use of the
->>>>>>> 1.5.x
 {spring-javadoc}/web/servlet/resource/ResourceUrlProvider.{dc-ext}[`ResourceUrlProvider`].
 
 When loading resources dynamically with, for example, a JavaScript module loader, renaming
@@ -1827,11 +1820,7 @@ will automatically configure Spring MVC to use it.
 [[boot-features-spring-mvc-template-engines]]
 ==== Template engines
 As well as REST web services, you can also use Spring MVC to serve dynamic HTML content.
-<<<<<<< HEAD
-Spring MVC supports a variety of templating technologies including FreeMarker
-=======
 Spring MVC supports a variety of templating technologies including Thymeleaf, FreeMarker
->>>>>>> 1.5.x
 and JSPs. Many other templating engines also ship their own Spring MVC integrations.
 
 Spring Boot includes auto-configuration support for the following templating engines:
@@ -3387,9 +3376,6 @@ properties:
 [[boot-features-connecting-to-neo4j-embedded]]
 ==== Using the embedded mode
 
-NOTE: Neo4j's embedded mode is subject to a different licensing, make sure to review it
-before integrating the dependency in your application.
-
 If you add `org.neo4j:neo4j-ogm-embedded-driver` to the dependencies of your application,
 Spring Boot will automatically configure an in-process embedded instance of Neo4j that
 will not persist any data when your application shuts down. You can explicitly disable
@@ -4827,7 +4813,8 @@ how your tests will run:
 * `MOCK` -- Loads a `WebApplicationContext` and provides a mock servlet environment.
   Embedded servlet containers are not started when using this annotation. If servlet
   APIs are not on your classpath this mode will transparently fallback to creating a
-  regular non-web `ApplicationContext`.
+  regular non-web `ApplicationContext`. Can be used in conjunction with
+  `@AutoConfigureMockMvc` for `MockMvc`-based testing of your application.
 * `RANDOM_PORT` -- Loads an `EmbeddedWebApplicationContext` and provides a real
   servlet environment. Embedded servlet containers are started and listening on a random
   port.
