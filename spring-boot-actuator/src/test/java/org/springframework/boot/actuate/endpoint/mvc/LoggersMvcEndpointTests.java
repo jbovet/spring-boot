@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2016 the original author or authors.
+ * Copyright 2012-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package org.springframework.boot.actuate.endpoint.mvc;
 
 import java.util.Collections;
+import java.util.EnumSet;
 
 import org.junit.After;
 import org.junit.Before;
@@ -26,7 +27,6 @@ import org.mockito.Mockito;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.actuate.autoconfigure.EndpointWebMvcAutoConfiguration;
-import org.springframework.boot.actuate.autoconfigure.ManagementServerPropertiesAutoConfiguration;
 import org.springframework.boot.actuate.endpoint.LoggersEndpoint;
 import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
 import org.springframework.boot.autoconfigure.web.HttpMessageConvertersAutoConfiguration;
@@ -38,7 +38,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
@@ -53,6 +55,7 @@ import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -63,6 +66,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest
+@TestPropertySource(properties = "management.security.enabled=false")
 public class LoggersMvcEndpointTests {
 
 	@Autowired
@@ -80,18 +84,22 @@ public class LoggersMvcEndpointTests {
 				.alwaysDo(MockMvcResultHandlers.print()).build();
 	}
 
+	@Before
 	@After
-	public void reset() {
+	public void resetMocks() {
 		Mockito.reset(this.loggingSystem);
+		given(this.loggingSystem.getSupportedLogLevels())
+				.willReturn(EnumSet.allOf(LogLevel.class));
 	}
 
 	@Test
 	public void getLoggerShouldReturnAllLoggerConfigurations() throws Exception {
 		given(this.loggingSystem.getLoggerConfigurations()).willReturn(Collections
 				.singletonList(new LoggerConfiguration("ROOT", null, LogLevel.DEBUG)));
+		String expected = "{\"levels\":[\"OFF\",\"FATAL\",\"ERROR\",\"WARN\",\"INFO\",\"DEBUG\",\"TRACE\"],"
+				+ "\"loggers\":{\"ROOT\":{\"configuredLevel\":null,\"effectiveLevel\":\"DEBUG\"}}}";
 		this.mvc.perform(get("/loggers")).andExpect(status().isOk())
-				.andExpect(content().string(equalTo("{\"ROOT\":{\"configuredLevel\":"
-						+ "null,\"effectiveLevel\":\"DEBUG\"}}")));
+				.andExpect(content().json(expected));
 	}
 
 	@Test
@@ -110,7 +118,7 @@ public class LoggersMvcEndpointTests {
 	}
 
 	@Test
-	public void getLoggesWhenDisabledShouldReturnNotFound() throws Exception {
+	public void getLoggersRootWhenDisabledShouldReturnNotFound() throws Exception {
 		this.context.getBean(LoggersEndpoint.class).setEnabled(false);
 		this.mvc.perform(get("/loggers/ROOT")).andExpect(status().isNotFound());
 	}
@@ -122,9 +130,32 @@ public class LoggersMvcEndpointTests {
 	}
 
 	@Test
-	public void setLoggerShouldSetLogLevel() throws Exception {
+	public void contentTypeForGetDefaultsToActuatorV1Json() throws Exception {
+		this.mvc.perform(get("/loggers")).andExpect(status().isOk())
+				.andExpect(header().string("Content-Type",
+						"application/vnd.spring-boot.actuator.v1+json;charset=UTF-8"));
+	}
+
+	@Test
+	public void contentTypeForGetCanBeApplicationJson() throws Exception {
+		this.mvc.perform(get("/loggers").header(HttpHeaders.ACCEPT,
+				MediaType.APPLICATION_JSON_VALUE)).andExpect(status().isOk())
+				.andExpect(header().string("Content-Type",
+						MediaType.APPLICATION_JSON_UTF8_VALUE));
+	}
+
+	@Test
+	public void setLoggerUsingApplicationJsonShouldSetLogLevel() throws Exception {
 		this.mvc.perform(post("/loggers/ROOT").contentType(MediaType.APPLICATION_JSON)
-				.content("{\"configuredLevel\":\"DEBUG\"}")).andExpect(status().isOk());
+				.content("{\"configuredLevel\":\"debug\"}")).andExpect(status().isOk());
+		verify(this.loggingSystem).setLogLevel("ROOT", LogLevel.DEBUG);
+	}
+
+	@Test
+	public void setLoggerUsingActuatorV1JsonShouldSetLogLevel() throws Exception {
+		this.mvc.perform(post("/loggers/ROOT")
+				.contentType(ActuatorMediaTypes.APPLICATION_ACTUATOR_V1_JSON)
+				.content("{\"configuredLevel\":\"debug\"}")).andExpect(status().isOk());
 		verify(this.loggingSystem).setLogLevel("ROOT", LogLevel.DEBUG);
 	}
 
@@ -140,8 +171,7 @@ public class LoggersMvcEndpointTests {
 	@Configuration
 	@Import({ JacksonAutoConfiguration.class,
 			HttpMessageConvertersAutoConfiguration.class,
-			EndpointWebMvcAutoConfiguration.class, WebMvcAutoConfiguration.class,
-			ManagementServerPropertiesAutoConfiguration.class })
+			EndpointWebMvcAutoConfiguration.class, WebMvcAutoConfiguration.class })
 	public static class TestConfiguration {
 
 		@Bean

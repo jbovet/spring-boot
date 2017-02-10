@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2016 the original author or authors.
+ * Copyright 2012-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,10 @@ import org.springframework.boot.loader.jar.Handler;
  * @author Andy Wilkinson
  */
 public class LaunchedURLClassLoader extends URLClassLoader {
+
+	static {
+		ClassLoader.registerAsParallelCapable();
+	}
 
 	/**
 	 * Create a new {@link LaunchedURLClassLoader} instance.
@@ -127,8 +131,8 @@ public class LaunchedURLClassLoader extends URLClassLoader {
 			AccessController.doPrivileged(new PrivilegedExceptionAction<Object>() {
 				@Override
 				public Object run() throws ClassNotFoundException {
-					String packageEntryName = packageName.replace(".", "/") + "/";
-					String classEntryName = className.replace(".", "/") + ".class";
+					String packageEntryName = packageName.replace('.', '/') + "/";
+					String classEntryName = className.replace('.', '/') + ".class";
 					for (URL url : getURLs()) {
 						try {
 							URLConnection connection = url.openConnection();

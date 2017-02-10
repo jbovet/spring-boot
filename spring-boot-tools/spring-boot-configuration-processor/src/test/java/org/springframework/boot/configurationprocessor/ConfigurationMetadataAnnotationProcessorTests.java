@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2016 the original author or authors.
+ * Copyright 2012-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,6 +34,7 @@ import org.springframework.boot.configurationprocessor.metadata.ConfigurationMet
 import org.springframework.boot.configurationprocessor.metadata.ItemDeprecation;
 import org.springframework.boot.configurationprocessor.metadata.ItemHint;
 import org.springframework.boot.configurationprocessor.metadata.ItemMetadata;
+import org.springframework.boot.configurationprocessor.metadata.TestJsonConverter;
 import org.springframework.boot.configurationsample.incremental.BarProperties;
 import org.springframework.boot.configurationsample.incremental.FooProperties;
 import org.springframework.boot.configurationsample.incremental.RenamedBarProperties;
@@ -47,6 +48,7 @@ import org.springframework.boot.configurationsample.method.EmptyTypeMethodConfig
 import org.springframework.boot.configurationsample.method.InvalidMethodConfig;
 import org.springframework.boot.configurationsample.method.MethodAndClassConfig;
 import org.springframework.boot.configurationsample.method.SimpleMethodConfig;
+import org.springframework.boot.configurationsample.simple.ClassWithNestedProperties;
 import org.springframework.boot.configurationsample.simple.DeprecatedSingleProperty;
 import org.springframework.boot.configurationsample.simple.HierarchicalProperties;
 import org.springframework.boot.configurationsample.simple.NotAnnotated;
@@ -59,12 +61,14 @@ import org.springframework.boot.configurationsample.specific.BuilderPojo;
 import org.springframework.boot.configurationsample.specific.DeprecatedUnrelatedMethodPojo;
 import org.springframework.boot.configurationsample.specific.DoubleRegistrationProperties;
 import org.springframework.boot.configurationsample.specific.ExcludedTypesPojo;
+import org.springframework.boot.configurationsample.specific.GenericConfig;
 import org.springframework.boot.configurationsample.specific.InnerClassAnnotatedGetterConfig;
 import org.springframework.boot.configurationsample.specific.InnerClassProperties;
 import org.springframework.boot.configurationsample.specific.InnerClassRootConfig;
 import org.springframework.boot.configurationsample.specific.InvalidAccessorProperties;
 import org.springframework.boot.configurationsample.specific.InvalidDoubleRegistrationProperties;
 import org.springframework.boot.configurationsample.specific.SimplePojo;
+import org.springframework.boot.junit.compiler.TestCompiler;
 import org.springframework.util.FileCopyUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -351,6 +355,25 @@ public class ConfigurationMetadataAnnotationProcessorTests {
 	}
 
 	@Test
+	public void nestedClassChildProperties() throws Exception {
+		ConfigurationMetadata metadata = compile(ClassWithNestedProperties.class);
+		assertThat(metadata).has(Metadata.withGroup("nestedChildProps")
+				.fromSource(ClassWithNestedProperties.NestedChildClass.class));
+		assertThat(metadata)
+				.has(Metadata
+						.withProperty("nestedChildProps.child-class-property",
+								Integer.class)
+						.fromSource(ClassWithNestedProperties.NestedChildClass.class)
+						.withDefaultValue(20));
+		assertThat(metadata)
+				.has(Metadata
+						.withProperty("nestedChildProps.parent-class-property",
+								Integer.class)
+						.fromSource(ClassWithNestedProperties.NestedChildClass.class)
+						.withDefaultValue(10));
+	}
+
+	@Test
 	public void builderPojo() throws IOException {
 		ConfigurationMetadata metadata = compile(BuilderPojo.class);
 		assertThat(metadata).has(Metadata.withProperty("builder.name"));
@@ -389,6 +412,32 @@ public class ConfigurationMetadataAnnotationProcessorTests {
 		this.thrown.expect(IllegalStateException.class);
 		this.thrown.expectMessage("Compilation failed");
 		compile(InvalidDoubleRegistrationProperties.class);
+	}
+
+	@Test
+	public void genericTypes() throws IOException {
+		ConfigurationMetadata metadata = compile(GenericConfig.class);
+		assertThat(metadata).has(Metadata.withGroup("generic").ofType(
+				"org.springframework.boot.configurationsample.specific.GenericConfig"));
+		assertThat(metadata).has(Metadata.withGroup("generic.foo").ofType(
+				"org.springframework.boot.configurationsample.specific.GenericConfig$Foo"));
+		assertThat(metadata).has(Metadata.withGroup("generic.foo.bar").ofType(
+				"org.springframework.boot.configurationsample.specific.GenericConfig$Bar"));
+		assertThat(metadata).has(Metadata.withGroup("generic.foo.bar.biz").ofType(
+				"org.springframework.boot.configurationsample.specific.GenericConfig$Bar$Biz"));
+		assertThat(metadata).has(Metadata.withProperty("generic.foo.name")
+				.ofType(String.class).fromSource(GenericConfig.Foo.class));
+		assertThat(metadata).has(Metadata.withProperty("generic.foo.string-to-bar")
+				.ofType("java.util.Map<java.lang.String,org.springframework.boot.configurationsample.specific.GenericConfig.Bar<java.lang.Integer>>")
+				.fromSource(GenericConfig.Foo.class));
+		assertThat(metadata).has(Metadata.withProperty("generic.foo.string-to-integer")
+				.ofType("java.util.Map<java.lang.String,java.lang.Integer>")
+				.fromSource(GenericConfig.Foo.class));
+		assertThat(metadata).has(Metadata.withProperty("generic.foo.bar.name")
+				.ofType("java.lang.String").fromSource(GenericConfig.Bar.class));
+		assertThat(metadata).has(Metadata.withProperty("generic.foo.bar.biz.name")
+				.ofType("java.lang.String").fromSource(GenericConfig.Bar.Biz.class));
+		assertThat(metadata.getItems()).hasSize(9);
 	}
 
 	@Test
@@ -583,8 +632,9 @@ public class ConfigurationMetadataAnnotationProcessorTests {
 		JSONObject additionalMetadata = new JSONObject();
 		additionalMetadata.put("properties", properties);
 		FileWriter writer = new FileWriter(additionalMetadataFile);
-		additionalMetadata.write(writer);
+		writer.append(additionalMetadata.toString(2));
 		writer.flush();
+		writer.close();
 		ConfigurationMetadata metadata = compile(SimpleProperties.class);
 		assertThat(metadata).has(Metadata.withProperty("simple.comparator"));
 		assertThat(metadata).has(Metadata.withProperty("foo", String.class)
@@ -677,23 +727,28 @@ public class ConfigurationMetadataAnnotationProcessorTests {
 		return processor.getMetadata();
 	}
 
-	private void writeAdditionalMetadata(ItemMetadata... metadata) throws IOException {
+	private void writeAdditionalMetadata(ItemMetadata... metadata) throws Exception {
+		TestJsonConverter converter = new TestJsonConverter();
 		File additionalMetadataFile = createAdditionalMetadataFile();
 		JSONObject additionalMetadata = new JSONObject();
-		additionalMetadata.put("properties", metadata);
+		JSONArray properties = new JSONArray();
+		for (ItemMetadata itemMetadata : metadata) {
+			properties.put(converter.toJsonObject(itemMetadata));
+		}
+		additionalMetadata.put("properties", properties);
 		writeMetadata(additionalMetadataFile, additionalMetadata);
 	}
 
-	private void writeAdditionalHints(ItemHint... hints) throws IOException {
+	private void writeAdditionalHints(ItemHint... hints) throws Exception {
+		TestJsonConverter converter = new TestJsonConverter();
 		File additionalMetadataFile = createAdditionalMetadataFile();
 		JSONObject additionalMetadata = new JSONObject();
-		additionalMetadata.put("hints", hints);
+		additionalMetadata.put("hints", converter.toJsonArray(Arrays.asList(hints)));
 		writeMetadata(additionalMetadataFile, additionalMetadata);
 	}
 
-	private void writePropertyDeprecation(ItemMetadata... items) throws IOException {
+	private void writePropertyDeprecation(ItemMetadata... items) throws Exception {
 		File additionalMetadataFile = createAdditionalMetadataFile();
-
 		JSONArray propertiesArray = new JSONArray();
 		for (ItemMetadata item : items) {
 			JSONObject jsonObject = new JSONObject();
@@ -729,11 +784,10 @@ public class ConfigurationMetadataAnnotationProcessorTests {
 		return additionalMetadataFile;
 	}
 
-	private void writeMetadata(File metadataFile, JSONObject metadata)
-			throws IOException {
+	private void writeMetadata(File metadataFile, JSONObject metadata) throws Exception {
 		FileWriter writer = new FileWriter(metadataFile);
 		try {
-			metadata.write(writer);
+			writer.append(metadata.toString(2));
 		}
 		finally {
 			writer.close();

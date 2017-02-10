@@ -116,6 +116,7 @@ public class PoolingConnectionFactoryBean extends PoolingConnectionFactory
 	/**
 	 * A {@link XAConnectionFactory} implementation that delegates to the
 	 * {@link ThreadLocal} {@link PoolingConnectionFactoryBean}.
+	 *
 	 * @see PoolingConnectionFactoryBean#setConnectionFactory(XAConnectionFactory)
 	 */
 	public static class DirectXAConnectionFactory implements XAConnectionFactory {
@@ -148,7 +149,7 @@ public class PoolingConnectionFactoryBean extends PoolingConnectionFactory
 
 		@Override
 		public XAJMSContext createXAContext(String username, String password) {
-			return this.createXAContext(username, password);
+			return this.connectionFactory.createXAContext(username, password);
 		}
 
 	}

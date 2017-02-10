@@ -16,22 +16,24 @@
 
 package org.springframework.boot.actuate.cloudfoundry;
 
-import java.util.Arrays;
 import java.util.Collections;
 
 import org.junit.Test;
 
 import org.springframework.boot.actuate.endpoint.AbstractEndpoint;
+import org.springframework.boot.actuate.endpoint.HealthEndpoint;
 import org.springframework.boot.actuate.endpoint.mvc.AbstractEndpointHandlerMappingTests;
 import org.springframework.boot.actuate.endpoint.mvc.EndpointMvcAdapter;
 import org.springframework.boot.actuate.endpoint.mvc.HalJsonMvcEndpoint;
+import org.springframework.boot.actuate.endpoint.mvc.HealthMvcEndpoint;
 import org.springframework.boot.actuate.endpoint.mvc.ManagementServletContext;
 import org.springframework.boot.actuate.endpoint.mvc.NamedMvcEndpoint;
+import org.springframework.boot.actuate.health.HealthIndicator;
+import org.springframework.boot.actuate.health.OrderedHealthAggregator;
 import org.springframework.context.support.StaticApplicationContext;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerExecutionChain;
-import org.springframework.web.servlet.HandlerInterceptor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -40,19 +42,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Madhura Bhave
  */
-public class CloudFoundryEndpointHandlerMappingTests extends AbstractEndpointHandlerMappingTests {
-
-	@Test
-	public void getHandlerExecutionChainShouldHaveSecurityInterceptor() throws Exception {
-		TestMvcEndpoint endpoint = new TestMvcEndpoint(new TestEndpoint("a"));
-		CloudFoundryEndpointHandlerMapping handlerMapping = new CloudFoundryEndpointHandlerMapping(
-				Arrays.asList(endpoint));
-		HandlerExecutionChain handlerExecutionChain = handlerMapping
-				.getHandlerExecutionChain(endpoint, new MockHttpServletRequest());
-		HandlerInterceptor[] interceptors = handlerExecutionChain.getInterceptors();
-		assertThat(interceptors).hasAtLeastOneElementOfType(
-				CloudFoundryEndpointHandlerMapping.SecurityInterceptor.class);
-	}
+public class CloudFoundryEndpointHandlerMappingTests
+		extends AbstractEndpointHandlerMappingTests {
 
 	@Test
 	public void getHandlerExecutionChainWhenEndpointHasPathShouldMapAgainstName()
@@ -60,14 +51,14 @@ public class CloudFoundryEndpointHandlerMappingTests extends AbstractEndpointHan
 		TestMvcEndpoint testMvcEndpoint = new TestMvcEndpoint(new TestEndpoint("a"));
 		testMvcEndpoint.setPath("something-else");
 		CloudFoundryEndpointHandlerMapping handlerMapping = new CloudFoundryEndpointHandlerMapping(
-				Arrays.asList(testMvcEndpoint));
+				Collections.singleton(testMvcEndpoint), null, null);
 		assertThat(handlerMapping.getPath(testMvcEndpoint)).isEqualTo("/a");
 	}
 
 	@Test
 	public void doesNotRegisterHalJsonMvcEndpoint() throws Exception {
 		CloudFoundryEndpointHandlerMapping handlerMapping = new CloudFoundryEndpointHandlerMapping(
-				Collections.<NamedMvcEndpoint>singleton(new TestHalJsonMvcEndpoint()));
+				Collections.singleton(new TestHalJsonMvcEndpoint()), null, null);
 		assertThat(handlerMapping.getEndpoints()).hasSize(0);
 	}
 
@@ -75,7 +66,7 @@ public class CloudFoundryEndpointHandlerMappingTests extends AbstractEndpointHan
 	public void registersCloudFoundryDiscoveryEndpoint() throws Exception {
 		StaticApplicationContext context = new StaticApplicationContext();
 		CloudFoundryEndpointHandlerMapping handlerMapping = new CloudFoundryEndpointHandlerMapping(
-				Collections.<NamedMvcEndpoint>emptyList());
+				Collections.<NamedMvcEndpoint>emptySet(), null, null);
 		handlerMapping.setPrefix("/test");
 		handlerMapping.setApplicationContext(context);
 		handlerMapping.afterPropertiesSet();
@@ -84,6 +75,23 @@ public class CloudFoundryEndpointHandlerMappingTests extends AbstractEndpointHan
 		HandlerMethod handlerMethod = (HandlerMethod) handler.getHandler();
 		assertThat(handlerMethod.getBean())
 				.isInstanceOf(CloudFoundryDiscoveryMvcEndpoint.class);
+	}
+
+	@Test
+	public void registersCloudFoundryHealthEndpoint() throws Exception {
+		StaticApplicationContext context = new StaticApplicationContext();
+		HealthEndpoint delegate = new HealthEndpoint(new OrderedHealthAggregator(),
+				Collections.<String, HealthIndicator>emptyMap());
+		CloudFoundryEndpointHandlerMapping handlerMapping = new CloudFoundryEndpointHandlerMapping(
+				Collections.singleton(new TestHealthMvcEndpoint(delegate)), null, null);
+		handlerMapping.setPrefix("/test");
+		handlerMapping.setApplicationContext(context);
+		handlerMapping.afterPropertiesSet();
+		HandlerExecutionChain handler = handlerMapping
+				.getHandler(new MockHttpServletRequest("GET", "/test/health"));
+		HandlerMethod handlerMethod = (HandlerMethod) handler.getHandler();
+		Object handlerMethodBean = handlerMethod.getBean();
+		assertThat(handlerMethodBean).isInstanceOf(CloudFoundryHealthMvcEndpoint.class);
 	}
 
 	private static class TestEndpoint extends AbstractEndpoint<Object> {
@@ -119,6 +127,15 @@ public class CloudFoundryEndpointHandlerMappingTests extends AbstractEndpointHan
 
 			});
 		}
+
+	}
+
+	private static class TestHealthMvcEndpoint extends HealthMvcEndpoint {
+
+		TestHealthMvcEndpoint(HealthEndpoint delegate) {
+			super(delegate);
+		}
+
 	}
 
 }

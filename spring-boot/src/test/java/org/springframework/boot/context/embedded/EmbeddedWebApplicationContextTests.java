@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2016 the original author or authors.
+ * Copyright 2012-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,9 +69,9 @@ import org.springframework.web.context.request.SessionScope;
 import org.springframework.web.filter.GenericFilterBean;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Matchers.anyObject;
-import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.atMost;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -232,7 +232,7 @@ public class EmbeddedWebApplicationContextTests {
 		addEmbeddedServletContainerFactoryBean();
 		OrderedFilter filter = new OrderedFilter();
 		this.context.registerBeanDefinition("filterBean", beanDefinition(filter));
-		FilterRegistrationBean registration = new FilterRegistrationBean();
+		FilterRegistrationBean<Filter> registration = new FilterRegistrationBean<Filter>();
 		registration.setFilter(mock(Filter.class));
 		registration.setOrder(100);
 		this.context.registerBeanDefinition("filterRegistrationBean",
@@ -381,8 +381,8 @@ public class EmbeddedWebApplicationContextTests {
 		ServletContext servletContext = getEmbeddedServletContainerFactory()
 				.getServletContext();
 		verify(initializer).onStartup(servletContext);
-		verify(servletContext).addServlet(anyString(), (Servlet) anyObject());
-		verify(servletContext).addFilter(anyString(), (Filter) anyObject());
+		verify(servletContext).addServlet(anyString(), (Servlet) any());
+		verify(servletContext).addFilter(anyString(), (Filter) any());
 	}
 
 	@Test
@@ -391,8 +391,8 @@ public class EmbeddedWebApplicationContextTests {
 		addEmbeddedServletContainerFactoryBean();
 		Servlet servlet = mock(Servlet.class);
 		Filter filter = mock(Filter.class);
-		ServletRegistrationBean initializer = new ServletRegistrationBean(servlet,
-				"/foo");
+		ServletRegistrationBean<Servlet> initializer = new ServletRegistrationBean<Servlet>(
+				servlet, "/foo");
 		this.context.registerBeanDefinition("initializerBean",
 				beanDefinition(initializer));
 		this.context.registerBeanDefinition("servletBean", beanDefinition(servlet));
@@ -400,22 +400,23 @@ public class EmbeddedWebApplicationContextTests {
 		this.context.refresh();
 		ServletContext servletContext = getEmbeddedServletContainerFactory()
 				.getServletContext();
-		verify(servletContext, atMost(1)).addServlet(anyString(), (Servlet) anyObject());
-		verify(servletContext, atMost(1)).addFilter(anyString(), (Filter) anyObject());
+		verify(servletContext, atMost(1)).addServlet(anyString(), (Servlet) any());
+		verify(servletContext, atMost(1)).addFilter(anyString(), (Filter) any());
 	}
 
 	@Test
 	public void filterRegistrationBeansSkipsRegisteredFilters() throws Exception {
 		addEmbeddedServletContainerFactoryBean();
 		Filter filter = mock(Filter.class);
-		FilterRegistrationBean initializer = new FilterRegistrationBean(filter);
+		FilterRegistrationBean<Filter> initializer = new FilterRegistrationBean<Filter>(
+				filter);
 		this.context.registerBeanDefinition("initializerBean",
 				beanDefinition(initializer));
 		this.context.registerBeanDefinition("filterBean", beanDefinition(filter));
 		this.context.refresh();
 		ServletContext servletContext = getEmbeddedServletContainerFactory()
 				.getServletContext();
-		verify(servletContext, atMost(1)).addFilter(anyString(), (Filter) anyObject());
+		verify(servletContext, atMost(1)).addFilter(anyString(), (Filter) any());
 	}
 
 	@Test

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2016 the original author or authors.
+ * Copyright 2012-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,8 @@ import org.junit.Test;
 
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
-import org.springframework.boot.autoconfigure.PropertyPlaceholderAutoConfiguration;
+import org.springframework.boot.WebApplicationType;
+import org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.oauth2.OAuth2ClientProperties;
 import org.springframework.boot.autoconfigure.security.oauth2.client.OAuth2RestOperationsConfiguration;
 import org.springframework.boot.autoconfigure.social.FacebookAutoConfiguration;
@@ -48,6 +49,7 @@ import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.oauth2.client.OAuth2RestTemplate;
+import org.springframework.security.oauth2.client.token.grant.code.AuthorizationCodeResourceDetails;
 import org.springframework.security.oauth2.provider.token.DefaultTokenServices;
 import org.springframework.security.oauth2.provider.token.RemoteTokenServices;
 import org.springframework.social.connect.ConnectionFactoryLocator;
@@ -85,7 +87,7 @@ public class ResourceServerTokenServicesConfigurationTests {
 	@Test
 	public void defaultIsRemoteTokenServices() {
 		this.context = new SpringApplicationBuilder(ResourceConfiguration.class)
-				.web(false).run();
+				.web(WebApplicationType.NONE).run();
 		RemoteTokenServices services = this.context.getBean(RemoteTokenServices.class);
 		assertThat(services).isNotNull();
 	}
@@ -96,7 +98,7 @@ public class ResourceServerTokenServicesConfigurationTests {
 				"security.oauth2.resource.tokenInfoUri:http://example.com",
 				"security.oauth2.resource.clientId=acme");
 		this.context = new SpringApplicationBuilder(ResourceConfiguration.class)
-				.environment(this.environment).web(false).run();
+				.environment(this.environment).web(WebApplicationType.NONE).run();
 		RemoteTokenServices services = this.context.getBean(RemoteTokenServices.class);
 		assertThat(services).isNotNull();
 	}
@@ -106,7 +108,7 @@ public class ResourceServerTokenServicesConfigurationTests {
 		EnvironmentTestUtils.addEnvironment(this.environment,
 				"security.oauth2.resource.userInfoUri:http://example.com");
 		this.context = new SpringApplicationBuilder(ResourceConfiguration.class)
-				.environment(this.environment).web(false).run();
+				.environment(this.environment).web(WebApplicationType.NONE).run();
 		UserInfoTokenServices services = this.context
 				.getBean(UserInfoTokenServices.class);
 		assertThat(services).isNotNull();
@@ -117,7 +119,7 @@ public class ResourceServerTokenServicesConfigurationTests {
 		EnvironmentTestUtils.addEnvironment(this.environment,
 				"security.oauth2.resource.userInfoUri:http://example.com");
 		this.context = new SpringApplicationBuilder(AuthoritiesConfiguration.class)
-				.environment(this.environment).web(false).run();
+				.environment(this.environment).web(WebApplicationType.NONE).run();
 		UserInfoTokenServices services = this.context
 				.getBean(UserInfoTokenServices.class);
 		assertThat(services).isNotNull();
@@ -130,7 +132,7 @@ public class ResourceServerTokenServicesConfigurationTests {
 		EnvironmentTestUtils.addEnvironment(this.environment,
 				"security.oauth2.resource.userInfoUri:http://example.com");
 		this.context = new SpringApplicationBuilder(PrincipalConfiguration.class)
-				.environment(this.environment).web(false).run();
+				.environment(this.environment).web(WebApplicationType.NONE).run();
 		UserInfoTokenServices services = this.context
 				.getBean(UserInfoTokenServices.class);
 		assertThat(services).isNotNull();
@@ -145,7 +147,7 @@ public class ResourceServerTokenServicesConfigurationTests {
 				"security.oauth2.resource.userInfoUri:http://example.com",
 				"server.port=-1", "debug=true");
 		this.context = new SpringApplicationBuilder(ResourceNoClientConfiguration.class)
-				.environment(this.environment).web(true).run();
+				.environment(this.environment).web(WebApplicationType.SERVLET).run();
 		BeanDefinition bean = ((BeanDefinitionRegistry) this.context)
 				.getBeanDefinition("scopedTarget.oauth2ClientContext");
 		assertThat(bean.getScope()).isEqualTo("request");
@@ -158,7 +160,7 @@ public class ResourceServerTokenServicesConfigurationTests {
 				"security.oauth2.resource.tokenInfoUri:http://example.com",
 				"security.oauth2.resource.preferTokenInfo:false");
 		this.context = new SpringApplicationBuilder(ResourceConfiguration.class)
-				.environment(this.environment).web(false).run();
+				.environment(this.environment).web(WebApplicationType.NONE).run();
 		UserInfoTokenServices services = this.context
 				.getBean(UserInfoTokenServices.class);
 		assertThat(services).isNotNull();
@@ -171,7 +173,8 @@ public class ResourceServerTokenServicesConfigurationTests {
 				"security.oauth2.resource.tokenInfoUri:http://example.com",
 				"security.oauth2.resource.preferTokenInfo:false");
 		this.context = new SpringApplicationBuilder(ResourceConfiguration.class,
-				Customizer.class).environment(this.environment).web(false).run();
+				Customizer.class).environment(this.environment).web(WebApplicationType.NONE)
+						.run();
 		UserInfoTokenServices services = this.context
 				.getBean(UserInfoTokenServices.class);
 		assertThat(services).isNotNull();
@@ -182,7 +185,7 @@ public class ResourceServerTokenServicesConfigurationTests {
 		EnvironmentTestUtils.addEnvironment(this.environment,
 				"security.oauth2.resource.jwt.keyValue=FOOBAR");
 		this.context = new SpringApplicationBuilder(ResourceConfiguration.class)
-				.environment(this.environment).web(false).run();
+				.environment(this.environment).web(WebApplicationType.NONE).run();
 		DefaultTokenServices services = this.context.getBean(DefaultTokenServices.class);
 		assertThat(services).isNotNull();
 	}
@@ -192,7 +195,7 @@ public class ResourceServerTokenServicesConfigurationTests {
 		EnvironmentTestUtils.addEnvironment(this.environment,
 				"security.oauth2.resource.jwt.keyValue=" + PUBLIC_KEY);
 		this.context = new SpringApplicationBuilder(ResourceConfiguration.class)
-				.environment(this.environment).web(false).run();
+				.environment(this.environment).web(WebApplicationType.NONE).run();
 		DefaultTokenServices services = this.context.getBean(DefaultTokenServices.class);
 		assertThat(services).isNotNull();
 	}
@@ -204,13 +207,26 @@ public class ResourceServerTokenServicesConfigurationTests {
 				"spring.social.facebook.app-id=foo",
 				"spring.social.facebook.app-secret=bar");
 		this.context = new SpringApplicationBuilder(SocialResourceConfiguration.class)
-				.environment(this.environment).web(true).run();
+				.environment(this.environment).web(WebApplicationType.SERVLET).run();
 		ConnectionFactoryLocator connectionFactory = this.context
 				.getBean(ConnectionFactoryLocator.class);
 		assertThat(connectionFactory).isNotNull();
 		SpringSocialTokenServices services = this.context
 				.getBean(SpringSocialTokenServices.class);
 		assertThat(services).isNotNull();
+	}
+
+	@Test
+	public void customUserInfoRestTemplateFactory() {
+		EnvironmentTestUtils.addEnvironment(this.environment,
+				"security.oauth2.resource.userInfoUri:http://example.com");
+		this.context = new SpringApplicationBuilder(
+				CustomUserInfoRestTemplateFactory.class, ResourceConfiguration.class)
+						.environment(this.environment).web(WebApplicationType.NONE).run();
+		assertThat(this.context.getBeansOfType(UserInfoRestTemplateFactory.class))
+				.hasSize(1);
+		assertThat(this.context.getBean(UserInfoRestTemplateFactory.class))
+				.isInstanceOf(CustomUserInfoRestTemplateFactory.class);
 	}
 
 	@Configuration
@@ -309,6 +325,20 @@ public class ResourceServerTokenServicesConfigurationTests {
 				}
 
 			});
+		}
+
+	}
+
+	@Component
+	protected static class CustomUserInfoRestTemplateFactory
+			implements UserInfoRestTemplateFactory {
+
+		private final OAuth2RestTemplate restTemplate = new OAuth2RestTemplate(
+				new AuthorizationCodeResourceDetails());
+
+		@Override
+		public OAuth2RestTemplate getUserInfoRestTemplate() {
+			return this.restTemplate;
 		}
 
 	}

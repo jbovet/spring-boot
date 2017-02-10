@@ -46,7 +46,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriTemplateHandler;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -275,6 +275,14 @@ public class RestTemplateBuilderTests {
 				.requestFactory(SimpleClientHttpRequestFactory.class).build();
 		assertThat(template.getRequestFactory())
 				.isInstanceOf(SimpleClientHttpRequestFactory.class);
+	}
+
+	@Test
+	public void requestFactoryPackagePrivateClassShouldApply() throws Exception {
+		RestTemplate template = this.builder
+				.requestFactory(TestClientHttpRequestFactory.class).build();
+		assertThat(template.getRequestFactory())
+				.isInstanceOf(TestClientHttpRequestFactory.class);
 	}
 
 	@Test
@@ -547,6 +555,10 @@ public class RestTemplateBuilderTests {
 	}
 
 	public static class RestTemplateSubclass extends RestTemplate {
+
+	}
+
+	static class TestClientHttpRequestFactory extends SimpleClientHttpRequestFactory {
 
 	}
 

@@ -16,26 +16,18 @@
 
 package org.springframework.boot.actuate.cloudfoundry;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Set;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.boot.actuate.endpoint.Endpoint;
 import org.springframework.boot.actuate.endpoint.mvc.AbstractEndpointHandlerMapping;
 import org.springframework.boot.actuate.endpoint.mvc.HalJsonMvcEndpoint;
+import org.springframework.boot.actuate.endpoint.mvc.HealthMvcEndpoint;
 import org.springframework.boot.actuate.endpoint.mvc.MvcEndpoint;
 import org.springframework.boot.actuate.endpoint.mvc.NamedMvcEndpoint;
 import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.servlet.HandlerExecutionChain;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.HandlerMapping;
-import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
 
 /**
  * {@link HandlerMapping} to map {@link Endpoint}s to Cloud Foundry specific URLs.
@@ -45,23 +37,30 @@ import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
 class CloudFoundryEndpointHandlerMapping
 		extends AbstractEndpointHandlerMapping<NamedMvcEndpoint> {
 
-	CloudFoundryEndpointHandlerMapping(Collection<? extends NamedMvcEndpoint> endpoints) {
-		super(endpoints);
-	}
-
-	CloudFoundryEndpointHandlerMapping(Set<NamedMvcEndpoint> endpoints,
-			CorsConfiguration corsConfiguration) {
+	CloudFoundryEndpointHandlerMapping(Set<? extends NamedMvcEndpoint> endpoints,
+			CorsConfiguration corsConfiguration, HandlerInterceptor securityInterceptor) {
 		super(endpoints, corsConfiguration);
+		setSecurityInterceptor(securityInterceptor);
 	}
 
 	@Override
 	protected void postProcessEndpoints(Set<NamedMvcEndpoint> endpoints) {
 		super.postProcessEndpoints(endpoints);
 		Iterator<NamedMvcEndpoint> iterator = endpoints.iterator();
+		HealthMvcEndpoint healthMvcEndpoint = null;
 		while (iterator.hasNext()) {
-			if (iterator.next() instanceof HalJsonMvcEndpoint) {
+			NamedMvcEndpoint endpoint = iterator.next();
+			if (endpoint instanceof HalJsonMvcEndpoint) {
 				iterator.remove();
 			}
+			else if (endpoint instanceof HealthMvcEndpoint) {
+				iterator.remove();
+				healthMvcEndpoint = (HealthMvcEndpoint) endpoint;
+			}
+		}
+		if (healthMvcEndpoint != null) {
+			endpoints.add(
+					new CloudFoundryHealthMvcEndpoint(healthMvcEndpoint.getDelegate()));
 		}
 	}
 
@@ -79,35 +78,4 @@ class CloudFoundryEndpointHandlerMapping
 		return super.getPath(endpoint);
 	}
 
-	@Override
-	protected HandlerExecutionChain getHandlerExecutionChain(Object handler,
-			HttpServletRequest request) {
-		HandlerExecutionChain chain = super.getHandlerExecutionChain(handler, request);
-		HandlerInterceptor[] interceptors = addSecurityInterceptor(
-				chain.getInterceptors());
-		return new HandlerExecutionChain(chain.getHandler(), interceptors);
-	}
-
-	private HandlerInterceptor[] addSecurityInterceptor(HandlerInterceptor[] existing) {
-		List<HandlerInterceptor> interceptors = new ArrayList<HandlerInterceptor>();
-		interceptors.add(new SecurityInterceptor());
-		if (existing != null) {
-			interceptors.addAll(Arrays.asList(existing));
-		}
-		return interceptors.toArray(new HandlerInterceptor[interceptors.size()]);
-	}
-
-	/**
-	 * Security interceptor to check cloud foundry token.
-	 */
-	static class SecurityInterceptor extends HandlerInterceptorAdapter {
-
-		@Override
-		public boolean preHandle(HttpServletRequest request, HttpServletResponse response,
-				Object handler) throws Exception {
-			// Currently open
-			return true;
-		}
-
-	}
 }
