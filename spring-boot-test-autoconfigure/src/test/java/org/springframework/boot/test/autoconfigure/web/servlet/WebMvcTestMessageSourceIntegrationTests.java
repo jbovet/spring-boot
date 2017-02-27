@@ -36,7 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @RunWith(SpringRunner.class)
 @WebMvcTest(secure = false)
-@TestPropertySource(properties = "spring.messages.basename=web-mvc-test-messages")
+@TestPropertySource(properties = "spring.messages.basename=web-test-messages")
 public class WebMvcTestMessageSourceIntegrationTests {
 
 	@Autowired

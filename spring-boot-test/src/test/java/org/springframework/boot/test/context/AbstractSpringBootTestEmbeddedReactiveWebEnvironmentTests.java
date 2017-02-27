@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2016 the original author or authors.
+ * Copyright 2012-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,34 +16,32 @@
 
 package org.springframework.boot.test.context;
 
-import javax.servlet.ServletContext;
-
 import org.junit.Test;
+import reactor.core.publisher.Mono;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.embedded.EmbeddedServletContainerFactory;
+import org.springframework.boot.context.ReactiveWebApplicationContext;
 import org.springframework.boot.context.embedded.LocalServerPort;
-import org.springframework.boot.context.embedded.tomcat.TomcatEmbeddedServletContainerFactory;
-import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.boot.context.embedded.ReactiveWebServerFactory;
+import org.springframework.boot.context.embedded.tomcat.TomcatReactiveWebServerFactory;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
+import org.springframework.http.server.reactive.HttpHandler;
+import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.context.WebApplicationContext;
-import org.springframework.web.context.support.WebApplicationContextUtils;
-import org.springframework.web.servlet.DispatcherServlet;
+import org.springframework.web.server.adapter.WebHttpHandlerBuilder;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Base class for {@link SpringBootTest} tests configured to start an embedded servlet
+ * Base class for {@link SpringBootTest} tests configured to start an embedded reactive
  * container.
  *
- * @author Phillip Webb
- * @author Andy Wilkinson
+ * @author Stephane Nicoll
  */
-public abstract class AbstractSpringBootTestEmbeddedWebEnvironmentTests {
+public abstract class AbstractSpringBootTestEmbeddedReactiveWebEnvironmentTests {
 
 	@LocalServerPort
 	private int port = 0;
@@ -52,45 +50,36 @@ public abstract class AbstractSpringBootTestEmbeddedWebEnvironmentTests {
 	private int value = 0;
 
 	@Autowired
-	private WebApplicationContext context;
+	private ReactiveWebApplicationContext context;
 
 	@Autowired
-	private ServletContext servletContext;
+	private WebTestClient webClient;
 
-	@Autowired
-	private TestRestTemplate restTemplate;
-
-	public WebApplicationContext getContext() {
+	public ReactiveWebApplicationContext getContext() {
 		return this.context;
-	}
-
-	public TestRestTemplate getRestTemplate() {
-		return this.restTemplate;
 	}
 
 	@Test
 	public void runAndTestHttpEndpoint() {
 		assertThat(this.port).isNotEqualTo(8080).isNotEqualTo(0);
-		String body = new RestTemplate()
-				.getForObject("http://localhost:" + this.port + "/", String.class);
-		assertThat(body).isEqualTo("Hello World");
+		WebTestClient.bindToServer()
+				.baseUrl("http://localhost:" + this.port).build()
+				.get().uri("/")
+				.exchange()
+				.expectBody(String.class).value().isEqualTo("Hello World");
 	}
 
 	@Test
-	public void injectTestRestTemplate() {
-		String body = this.restTemplate.getForObject("/", String.class);
-		assertThat(body).isEqualTo("Hello World");
+	public void injectWebTestClient() {
+		this.webClient
+				.get().uri("/")
+				.exchange()
+				.expectBody(String.class).value().isEqualTo("Hello World");
 	}
 
 	@Test
 	public void annotationAttributesOverridePropertiesFile() throws Exception {
 		assertThat(this.value).isEqualTo(123);
-	}
-
-	@Test
-	public void validateWebApplicationContextIsSet() {
-		assertThat(this.context).isSameAs(
-				WebApplicationContextUtils.getWebApplicationContext(this.servletContext));
 	}
 
 	protected static class AbstractConfig {
@@ -99,13 +88,13 @@ public abstract class AbstractSpringBootTestEmbeddedWebEnvironmentTests {
 		private int port = 8080;
 
 		@Bean
-		public DispatcherServlet dispatcherServlet() {
-			return new DispatcherServlet();
+		public HttpHandler httpHandler(ApplicationContext applicationContext) {
+			return WebHttpHandlerBuilder.applicationContext(applicationContext).build();
 		}
 
 		@Bean
-		public EmbeddedServletContainerFactory embeddedServletContainer() {
-			TomcatEmbeddedServletContainerFactory factory = new TomcatEmbeddedServletContainerFactory();
+		public ReactiveWebServerFactory embeddedReactiveContainer() {
+			TomcatReactiveWebServerFactory factory = new TomcatReactiveWebServerFactory();
 			factory.setPort(this.port);
 			return factory;
 		}
@@ -116,8 +105,8 @@ public abstract class AbstractSpringBootTestEmbeddedWebEnvironmentTests {
 		}
 
 		@RequestMapping("/")
-		public String home() {
-			return "Hello World";
+		public Mono<String> home() {
+			return Mono.just("Hello World");
 		}
 
 	}

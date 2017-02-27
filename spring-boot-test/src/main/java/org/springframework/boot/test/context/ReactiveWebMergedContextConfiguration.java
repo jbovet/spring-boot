@@ -14,15 +14,21 @@
  * limitations under the License.
  */
 
-package org.springframework.boot.context.embedded;
+package org.springframework.boot.test.context;
 
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.test.context.MergedContextConfiguration;
 
 /**
- * A {@link AnnotationConfigApplicationContext} that can be used to bootstrap itself from a contained
- * embedded web server factory bean.
- * @author Brian Clozel
+ * Encapsulates the <em>merged</em> context configuration declared on a test class and
+ * all of its superclasses for a reactive web application.
+ *
+ * @author Stephane Nicoll
  * @since 2.0.0
  */
-public class ReactiveWebApplicationContext extends AnnotationConfigApplicationContext {
+public class ReactiveWebMergedContextConfiguration extends MergedContextConfiguration {
+
+	public ReactiveWebMergedContextConfiguration(
+			MergedContextConfiguration mergedConfig) {
+		super(mergedConfig);
+	}
 }

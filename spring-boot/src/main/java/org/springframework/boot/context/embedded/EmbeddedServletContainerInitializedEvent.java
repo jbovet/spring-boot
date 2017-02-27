@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2014 the original author or authors.
+ * Copyright 2012-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,20 @@
 
 package org.springframework.boot.context.embedded;
 
-import org.springframework.context.ApplicationEvent;
+import org.springframework.util.StringUtils;
 
 /**
- * Event to be published after the context is refreshed and the
- * {@link EmbeddedWebServer} is ready. Useful for obtaining the local port of a
- * running server. Normally it will have been started, but listeners are free to inspect
+ * Event to be published after the {@link EmbeddedWebApplicationContext} is
+ * refreshed and the {@link EmbeddedWebServer} is ready. Useful for
+ * obtaining the local port of a running server.
+ *
+ * <p>Normally it will have been started, but listeners are free to inspect
  * the server and stop and start it if they want to.
  *
  * @author Dave Syer
  */
 @SuppressWarnings("serial")
-public class EmbeddedServletContainerInitializedEvent extends ApplicationEvent {
+public class EmbeddedServletContainerInitializedEvent extends EmbeddedWebServerInitializedEvent {
 
 	private final EmbeddedWebApplicationContext applicationContext;
 
@@ -39,30 +41,23 @@ public class EmbeddedServletContainerInitializedEvent extends ApplicationEvent {
 	}
 
 	/**
-	 * Access the {@link EmbeddedWebServer}.
-	 * @return the embedded servlet container
-	 */
-	public EmbeddedWebServer getEmbeddedServletContainer() {
-		return getSource();
-	}
-
-	/**
-	 * Access the source of the event (an {@link EmbeddedWebServer}).
-	 * @return the embedded servlet container
-	 */
-	@Override
-	public EmbeddedWebServer getSource() {
-		return (EmbeddedWebServer) super.getSource();
-	}
-
-	/**
 	 * Access the application context that the container was created in. Sometimes it is
 	 * prudent to check that this matches expectations (like being equal to the current
 	 * context) before acting on the server container itself.
 	 * @return the applicationContext that the container was created from
 	 */
+	@Override
 	public EmbeddedWebApplicationContext getApplicationContext() {
 		return this.applicationContext;
+	}
+
+	@Override
+	public String getServerId() {
+		String name = this.applicationContext.getNamespace();
+		if (StringUtils.isEmpty(name)) {
+			name = "server";
+		}
+		return name;
 	}
 
 }
